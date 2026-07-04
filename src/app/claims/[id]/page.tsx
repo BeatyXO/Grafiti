@@ -65,7 +65,7 @@ export default function ClaimDetailPage({
   }, [claimId]);
 
   useEffect(() => {
-    reload();
+    void (async () => { await reload(); })();
   }, [reload]);
 
   if (loading) {

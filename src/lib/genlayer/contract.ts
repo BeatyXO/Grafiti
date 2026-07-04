@@ -11,6 +11,7 @@ import {
   getReadClient,
   getWalletClient,
   isContractConfigured,
+  switchToStudioNet,
 } from "./client";
 
 function requireContract() {
@@ -50,6 +51,10 @@ async function write(
 ): Promise<WriteResult> {
   requireContract();
   const client = getWalletClient(from);
+  // Switch MetaMask to StudioNet before writing.
+  // We do this manually instead of client.connect() to avoid the snap
+  // installation step which is not required for basic signing.
+  await switchToStudioNet();
   const hash = await client.writeContract({
     address: CONTRACT_ADDRESS,
     functionName,

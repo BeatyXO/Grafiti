@@ -1,20 +1,10 @@
+# v0.2.20
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-#
-# Grafiti Protocol — Decentralized Reputation and Credibility Consensus
-#
-# Intelligent Contract for GenLayer (StudioNet).
-# Canonical source of truth for claims, evidence references, consensus
-# assessments, and Gravity Scores.
-#
-# Storage architecture deliberately mirrors the flat TreeMap[str, str]
-# pattern (JSON-encoded blobs + pipe-delimited index strings, no nested
-# custom dataclasses / DynArray-of-dataclass / Address-keyed maps) to
-# stay within GenVM's schema-introspection constraints.
+
+from genlayer import *
 
 import json
 import typing
-
-from genlayer import *
 
 # ---------------------------------------------------------------------------
 # Tunable protocol constants
@@ -64,6 +54,17 @@ class GrafitiProtocol(gl.Contract):
 
     def __init__(self) -> None:
         self.claim_counter = u256(0)
+
+        self.claims = TreeMap()
+        self.claim_index = TreeMap()
+        self.owner_claims = TreeMap()
+
+        self.claim_evidence = TreeMap()
+
+        self.reputation = TreeMap()
+        self.participants = TreeMap()
+
+        self.assessments = TreeMap()
 
     # ------------------------------------------------------------------
     # Internal helpers

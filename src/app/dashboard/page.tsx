@@ -15,12 +15,14 @@ export default function DashboardPage() {
   const { address } = useWallet();
   const [rep, setRep] = useState<Reputation | null>(null);
   const [claims, setClaims] = useState<Claim[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!address || !isContractConfigured()) return;
-    setLoading(true);
+    if (!address || !isContractConfigured()) {
+      Promise.resolve().then(() => setLoading(false));
+      return;
+    }
     Promise.all([getReputation(address), getClaimsByOwner(address)])
       .then(([r, c]) => {
         setRep(r);

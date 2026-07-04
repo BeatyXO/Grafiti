@@ -19,8 +19,10 @@ export default function ExplorerPage() {
 
   useEffect(() => {
     if (!isContractConfigured()) {
-      setError("Contract address not configured — see Settings.");
-      setLoading(false);
+      Promise.resolve().then(() => {
+        setError("Contract address not configured — see Settings.");
+        setLoading(false);
+      });
       return;
     }
     Promise.all([getLeaderboard(), getClaims(0, 50)])

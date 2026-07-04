@@ -16,8 +16,10 @@ export default function EvidenceRegistryPage() {
 
   useEffect(() => {
     if (!isContractConfigured()) {
-      setError("Contract address not configured — see Settings.");
-      setLoading(false);
+      Promise.resolve().then(() => {
+        setError("Contract address not configured — see Settings.");
+        setLoading(false);
+      });
       return;
     }
     (async () => {

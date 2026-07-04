@@ -48,7 +48,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const provider = getProvider();
-    setHasProvider(!!provider);
+    const providerExists = !!provider;
+    Promise.resolve().then(() => setHasProvider(providerExists));
     if (!provider) return;
 
     // silently restore a previous session
