@@ -92,7 +92,7 @@ export function submitClaim(
 export function addEvidence(
   from: `0x${string}`,
   input: {
-    claimId: number;
+    claimId: string;
     title: string;
     kind: string;
     url: string;
@@ -115,14 +115,18 @@ export function addEvidence(
 
 export function requestReview(
   from: `0x${string}`,
-  claimId: number,
+  claimId: string,
 ): Promise<WriteResult> {
-  return write(from, "request_review", [claimId]);
+  return write(from, "request_review", [claimId, new Date().toISOString()]);
 }
 
 // ----------------------------------------------------------------- reads
 
-export const getClaim = (id: number) => readJson<Claim>("get_claim", [id]);
+export const getClaim = async (id: string): Promise<Claim> => {
+  const raw = await read<string>("get_claim", [id]);
+  if (!raw) throw new Error("Unknown claim");
+  return JSON.parse(raw) as Claim;
+};
 
 export const getClaims = (offset = 0, limit = 50) =>
   readJson<Claim[]>("get_claims", [offset, limit]);
@@ -132,10 +136,10 @@ export const getClaimCount = () => read<number>("get_claim_count");
 export const getClaimsByOwner = (owner: string) =>
   readJson<Claim[]>("get_claims_by_owner", [owner]);
 
-export const getEvidence = (claimId: number) =>
+export const getEvidence = (claimId: string) =>
   readJson<Evidence[]>("get_evidence", [claimId]);
 
-export const getAssessment = async (claimId: number) => {
+export const getAssessment = async (claimId: string) => {
   const a = await readJson<Assessment | Record<string, never>>(
     "get_assessment",
     [claimId],

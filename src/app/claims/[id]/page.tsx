@@ -37,7 +37,7 @@ export default function ClaimDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const claimId = Number(id);
+  const claimId = id;
   const { address } = useWallet();
 
   const [claim, setClaim] = useState<Claim | null>(null);

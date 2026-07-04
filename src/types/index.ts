@@ -37,7 +37,7 @@ export const EVIDENCE_TYPES = [
 ] as const;
 
 export interface Claim {
-  id: number;
+  id: string;
   owner: string;
   title: string;
   description: string;
@@ -49,7 +49,7 @@ export interface Claim {
 }
 
 export interface Evidence {
-  claim_id: number;
+  claim_id: string;
   title: string;
   kind: string;
   url: string;
@@ -61,7 +61,7 @@ export interface Evidence {
 }
 
 export interface Assessment {
-  claim_id: number;
+  claim_id: string;
   status: ClaimStatus;
   gravity_delta: number;
   resulting_score: number;
