@@ -1,4 +1,4 @@
-# { "Depends": "py-genlayer:latest" }
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 #
 # Grafiti Protocol — Decentralized Reputation and Credibility Consensus
 #
@@ -136,8 +136,10 @@ class GrafitiProtocol(gl.Contract):
         evidence_summary: str,
         created_at: str,
     ) -> u256:
-        assert len(title.strip()) > 0, "Claim title is required"
-        assert len(description.strip()) > 0, "Claim description is required"
+        if len(title.strip()) == 0:
+            raise gl.vm.UserError("Claim title is required")
+        if len(description.strip()) == 0:
+            raise gl.vm.UserError("Claim description is required")
         claim_id = self.next_claim_id
         owner = gl.message.sender_address
         self.claims[claim_id] = Claim(
@@ -172,13 +174,14 @@ class GrafitiProtocol(gl.Contract):
         relevance: str,
         submitted_at: str,
     ) -> None:
-        assert claim_id in self.claims, "Unknown claim"
+        if claim_id not in self.claims:
+            raise gl.vm.UserError("Unknown claim")
         claim = self.claims[claim_id]
-        assert not claim.reviewed, "Claim already reviewed; evidence is frozen"
-        assert url.startswith("http://") or url.startswith("https://"), "Evidence URL must be public (http/https)"
-        if claim_id not in self.claim_evidence:
-            self.claim_evidence[claim_id] = DynArray[Evidence]()
-        self.claim_evidence[claim_id].append(
+        if claim.reviewed:
+            raise gl.vm.UserError("Claim already reviewed; evidence is frozen")
+        if not (url.startswith("http://") or url.startswith("https://")):
+            raise gl.vm.UserError("Evidence URL must be public (http/https)")
+        self.claim_evidence.get_or_insert_default(claim_id).append(
             Evidence(
                 claim_id=claim_id,
                 title=title,
@@ -197,11 +200,13 @@ class GrafitiProtocol(gl.Contract):
     # ------------------------------------------------------------------
     @gl.public.write
     def request_review(self, claim_id: u256) -> str:
-        assert claim_id in self.claims, "Unknown claim"
+        if claim_id not in self.claims:
+            raise gl.vm.UserError("Unknown claim")
         claim = self.claims[claim_id]
-        assert not claim.reviewed, "Claim has already been reviewed"
-        assert claim_id in self.claim_evidence and len(self.claim_evidence[claim_id]) > 0, \
-            "At least one piece of evidence is required before review"
+        if claim.reviewed:
+            raise gl.vm.UserError("Claim has already been reviewed")
+        if claim_id not in self.claim_evidence or len(self.claim_evidence[claim_id]) == 0:
+            raise gl.vm.UserError("At least one piece of evidence is required before review")
 
         owner = claim.owner
         rep = self._ensure_reputation(owner)
@@ -267,7 +272,7 @@ Rules:
             result = gl.nondet.exec_prompt(prompt)
             return str(result).replace("```json", "").replace("```", "").strip()
 
-        raw = gl.eq_principle_prompt_comparative(
+        raw = gl.eq_principle.prompt_comparative(
             evaluate,
             principle=(
                 "The status classification must be identical, gravity_delta within 5 points, "
@@ -328,7 +333,8 @@ Rules:
     # ------------------------------------------------------------------
     @gl.public.view
     def get_claim(self, claim_id: u256) -> dict:
-        assert claim_id in self.claims, "Unknown claim"
+        if claim_id not in self.claims:
+            raise gl.vm.UserError("Unknown claim")
         c = self.claims[claim_id]
         return {
             "id": int(c.id),
