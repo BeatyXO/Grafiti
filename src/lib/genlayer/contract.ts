@@ -134,7 +134,7 @@ export const getClaim = async (id: string): Promise<Claim> => {
 };
 
 export const getClaims = (offset = 0, limit = 50) =>
-  readJson<Claim[]>("get_claims", [offset, limit]);
+  readJson<Claim[]>("get_claims", [BigInt(offset), BigInt(limit)]);
 
 export const getClaimCount = () => read<number>("get_claim_count");
 
