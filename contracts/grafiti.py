@@ -77,6 +77,10 @@ class Assessment:
     reasoning: str
 
 
+def to_json(value) -> str:
+    return json.dumps(value, sort_keys=True)
+
+
 def credibility_level(score: int) -> str:
     if score >= 900:
         return "Authority"
@@ -331,10 +335,7 @@ Rules:
     # ------------------------------------------------------------------
     # Views
     # ------------------------------------------------------------------
-    @gl.public.view
-    def get_claim(self, claim_id: u256) -> dict:
-        if claim_id not in self.claims:
-            raise gl.vm.UserError("Unknown claim")
+    def _claim_dict(self, claim_id: u256) -> dict:
         c = self.claims[claim_id]
         return {
             "id": int(c.id),
@@ -349,7 +350,13 @@ Rules:
         }
 
     @gl.public.view
-    def get_claims(self, offset: u256, limit: u256) -> list:
+    def get_claim(self, claim_id: u256) -> str:
+        if claim_id not in self.claims:
+            raise gl.vm.UserError("Unknown claim")
+        return to_json(self._claim_dict(claim_id))
+
+    @gl.public.view
+    def get_claims(self, offset: u256, limit: u256) -> str:
         total = int(self.next_claim_id) - 1
         out = []
         # newest first
@@ -358,27 +365,27 @@ Rules:
         for i in range(start, stop, -1):
             cid = u256(i)
             if cid in self.claims:
-                out.append(self.get_claim(cid))
-        return out
+                out.append(self._claim_dict(cid))
+        return to_json(out)
 
     @gl.public.view
     def get_claim_count(self) -> u256:
         return u256(int(self.next_claim_id) - 1)
 
     @gl.public.view
-    def get_claims_by_owner(self, owner: str) -> list:
+    def get_claims_by_owner(self, owner: str) -> str:
         target = Address(owner)
         out = []
         for i in range(1, int(self.next_claim_id)):
             cid = u256(i)
             if cid in self.claims and self.claims[cid].owner == target:
-                out.append(self.get_claim(cid))
-        return out
+                out.append(self._claim_dict(cid))
+        return to_json(out)
 
     @gl.public.view
-    def get_evidence(self, claim_id: u256) -> list:
+    def get_evidence(self, claim_id: u256) -> str:
         if claim_id not in self.claim_evidence:
-            return []
+            return to_json([])
         out = []
         for ev in self.claim_evidence[claim_id]:
             out.append({
@@ -392,14 +399,14 @@ Rules:
                 "submitter": ev.submitter.as_hex,
                 "submitted_at": ev.submitted_at,
             })
-        return out
+        return to_json(out)
 
     @gl.public.view
-    def get_assessment(self, claim_id: u256) -> dict:
+    def get_assessment(self, claim_id: u256) -> str:
         if claim_id not in self.assessments:
-            return {}
+            return to_json({})
         a = self.assessments[claim_id]
-        return {
+        return to_json({
             "claim_id": int(a.claim_id),
             "status": a.status,
             "gravity_delta": int(a.gravity_delta),
@@ -411,13 +418,13 @@ Rules:
             "historical_accuracy": int(a.historical_accuracy),
             "contradiction_level": a.contradiction_level,
             "reasoning": a.reasoning,
-        }
+        })
 
     @gl.public.view
-    def get_reputation(self, owner: str) -> dict:
+    def get_reputation(self, owner: str) -> str:
         target = Address(owner)
         if target not in self.reputation:
-            return {
+            return to_json({
                 "gravity_score": INITIAL_GRAVITY_SCORE,
                 "credibility_level": credibility_level(INITIAL_GRAVITY_SCORE),
                 "historical_accuracy": 50,
@@ -427,9 +434,9 @@ Rules:
                 "unsupported": 0,
                 "inconclusive": 0,
                 "exists": False,
-            }
+            })
         r = self.reputation[target]
-        return {
+        return to_json({
             "gravity_score": int(r.gravity_score),
             "credibility_level": credibility_level(int(r.gravity_score)),
             "historical_accuracy": self._historical_accuracy(r),
@@ -439,10 +446,10 @@ Rules:
             "unsupported": int(r.unsupported),
             "inconclusive": int(r.inconclusive),
             "exists": True,
-        }
+        })
 
     @gl.public.view
-    def get_leaderboard(self) -> list:
+    def get_leaderboard(self) -> str:
         out = []
         for addr in self.participants:
             r = self.reputation[addr]
@@ -455,4 +462,4 @@ Rules:
                 "verified": int(r.verified),
             })
         out.sort(key=lambda x: x["gravity_score"], reverse=True)
-        return out
+        return to_json(out)

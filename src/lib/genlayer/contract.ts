@@ -33,6 +33,12 @@ async function read<T>(functionName: string, args: unknown[] = []): Promise<T> {
   return result as T;
 }
 
+/** Views that return JSON-encoded strings (GenVM schema only supports scalars + TreeMap/DynArray, not bare dict/list). */
+async function readJson<T>(functionName: string, args: unknown[] = []): Promise<T> {
+  const raw = await read<string>(functionName, args);
+  return JSON.parse(raw) as T;
+}
+
 export interface WriteResult {
   hash: string;
 }
@@ -116,28 +122,29 @@ export function requestReview(
 
 // ----------------------------------------------------------------- reads
 
-export const getClaim = (id: number) => read<Claim>("get_claim", [id]);
+export const getClaim = (id: number) => readJson<Claim>("get_claim", [id]);
 
 export const getClaims = (offset = 0, limit = 50) =>
-  read<Claim[]>("get_claims", [offset, limit]);
+  readJson<Claim[]>("get_claims", [offset, limit]);
 
 export const getClaimCount = () => read<number>("get_claim_count");
 
 export const getClaimsByOwner = (owner: string) =>
-  read<Claim[]>("get_claims_by_owner", [owner]);
+  readJson<Claim[]>("get_claims_by_owner", [owner]);
 
 export const getEvidence = (claimId: number) =>
-  read<Evidence[]>("get_evidence", [claimId]);
+  readJson<Evidence[]>("get_evidence", [claimId]);
 
 export const getAssessment = async (claimId: number) => {
-  const a = await read<Assessment | Record<string, never>>("get_assessment", [
-    claimId,
-  ]);
+  const a = await readJson<Assessment | Record<string, never>>(
+    "get_assessment",
+    [claimId],
+  );
   return a && "status" in a ? (a as Assessment) : null;
 };
 
 export const getReputation = (owner: string) =>
-  read<Reputation>("get_reputation", [owner]);
+  readJson<Reputation>("get_reputation", [owner]);
 
 export const getLeaderboard = () =>
-  read<LeaderboardEntry[]>("get_leaderboard");
+  readJson<LeaderboardEntry[]>("get_leaderboard");
