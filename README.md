@@ -1,71 +1,140 @@
 # Grafiti — Decentralized Reputation and Credibility Consensus
 
-Grafiti is a decentralized reputation protocol on [GenLayer](https://genlayer.com).
-Users make public claims backed by public evidence URLs; GenLayer validators
-evaluate each claim with AI (non-deterministic consensus) and adjust the
-claimant's **Gravity Score** — credibility earned through consistent accuracy,
-not popularity.
+Grafiti is a decentralized reputation protocol built on [GenLayer](https://genlayer.com). Users make public claims backed by public evidence URLs. GenLayer validators independently fetch the evidence using non-deterministic web access, assess credibility through AI consensus, and permanently adjust the claimant's **Gravity Score** — reputation earned through verified accuracy, not social signals.
+
+Live: [grafiti-orcin.vercel.app](https://grafiti-orcin.vercel.app)
+
+---
+
+## How it works
+
+1. **Submit a claim** — any wallet can submit a public, on-chain claim with a title, description, category, and evidence summary
+2. **Attach evidence** — structured evidence references (public URLs + client-side SHA-256 hashes) are registered on-chain; evidence is frozen once a review runs
+3. **Request a credibility review** — GenLayer validators each independently fetch the evidence URLs (`gl.nondet.web.render`), evaluate the evidence quality, source reliability, consistency, and contradictions, then reach consensus using `gl.eq_principle.prompt_non_comparative`
+4. **Reputation update** — the Gravity Score (0–1000, starts at 500) shifts by a bounded delta (max +20 / −25 per review); the assessment record is immutable on-chain
+
+**Credibility levels**
+
+| Score range | Level |
+|-------------|-------|
+| 900–1000 | Authority |
+| 750–899 | Trusted |
+| 600–749 | Reliable |
+| 300–599 | Neutral |
+| 0–299 | Untrusted |
+
+---
 
 ## Stack
 
-- **Frontend:** Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui
-- **Chain:** GenLayer StudioNet (GEN token) via `genlayer-js`
-- **Contract:** `contracts/grafiti.py` (GenLayer Intelligent Contract, Python)
-- **Wallets:** injected providers — MetaMask, Rainbow, Zerion
-- No backend, no database, no file uploads. The contract is the source of truth.
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16 (App Router) · TypeScript · Tailwind CSS · shadcn/ui |
+| Chain | GenLayer StudioNet · GEN token |
+| SDK | genlayer-js 1.1.8 |
+| Contract | Python · GenLayer Intelligent Contract (`contracts/grafiti.py`) |
+| Wallets | Injected providers — MetaMask, Rainbow, Zerion |
 
-## Getting started (Windows-safe)
+No backend. No database. No file uploads. The Intelligent Contract is the canonical source of truth.
 
-```powershell
-npm install
-Copy-Item .env.example .env.local   # then fill in the contract address
-npm run dev
-```
-
-## Deploying the Intelligent Contract
-
-**Option A — GenLayer Studio (recommended):**
-1. Open https://studio.genlayer.com
-2. Create a new contract, paste the contents of `contracts/grafiti.py`
-3. Deploy (no constructor args) and copy the contract address
-
-**Option B — script:**
-```powershell
-$env:DEPLOYER_PRIVATE_KEY = "0x..."   # funded StudioNet account
-node scripts/deploy.mjs
-```
-
-Then set the address:
-
-```powershell
-# .env.local
-NEXT_PUBLIC_CONTRACT_ADDRESS=0xYourContractAddress
-```
-
-## Deploying the frontend (Vercel)
-
-1. Push this repo to GitHub and import it in Vercel
-2. Add the `NEXT_PUBLIC_CONTRACT_ADDRESS` environment variable
-3. Deploy — no other configuration required
-
-## Protocol workflow
-
-1. **Submit claim** (`/submit`) — title, description, category, evidence summary
-2. **Attach evidence** (claim page) — public URLs + client-side SHA-256 hashes;
-   evidence freezes once a review runs
-3. **Request review** — validators fetch the evidence, score evidence quality,
-   consistency, source reliability, and contradictions, then converge via
-   `gl.eq_principle_prompt_comparative` on the most defensible assessment
-4. **Reputation update** — Gravity Score (0–1000, starts at 500) shifts by a
-   bounded delta (+20 / −25 max per review); the assessment is immutable
-
-Credibility levels: `Untrusted <300 · Neutral 300–599 · Reliable 600–749 ·
-Trusted 750–899 · Authority 900+`
+---
 
 ## Pages
 
-`/` landing · `/submit` claim submission · `/dashboard` reputation dashboard ·
-`/claims/[id]` claim detail + consensus viewer · `/profile/[address]` public
-profile + claim history · `/explorer` credibility ranking + recent claims ·
-`/evidence` evidence registry · `/settings` network, wallet, and raw contract
-interaction panel
+| Route | Description |
+|-------|-------------|
+| `/` | Landing page |
+| `/submit` | Submit a public claim |
+| `/dashboard` | Your Gravity Score, credibility level, and claim history |
+| `/claims/[id]` | Claim detail, evidence list, and consensus assessment viewer |
+| `/profile/[address]` | Public profile and claim history for any wallet |
+| `/explorer` | Credibility leaderboard and recent claims |
+| `/evidence` | Full on-chain evidence registry |
+| `/settings` | Network info, wallet status, and raw contract interaction panel |
+
+---
+
+## Contract
+
+**Address (StudioNet):** `0x438c845F4Addb0f9CCD7Ae675802528A34dAa87C`
+
+File: [`contracts/grafiti.py`](contracts/grafiti.py)
+
+### Storage architecture
+
+All storage uses flat `TreeMap[str, str]` with JSON-encoded blobs and pipe-delimited index strings — the pattern required by GenVM's schema introspection. No nested dataclasses, no Address-keyed maps, no DynArray of custom types.
+
+```python
+claim_counter: u256
+claims: TreeMap[str, str]         # claim_id -> JSON claim record
+claim_index: TreeMap[str, str]    # "all" -> pipe-joined claim IDs
+owner_claims: TreeMap[str, str]   # owner address -> pipe-joined claim IDs
+claim_evidence: TreeMap[str, str] # claim_id -> JSON evidence array
+reputation: TreeMap[str, str]     # owner address -> JSON reputation record
+participants: TreeMap[str, str]   # "all" -> pipe-joined addresses
+assessments: TreeMap[str, str]    # claim_id -> JSON assessment record
+```
+
+### Non-deterministic AI consensus
+
+The `request_review` method uses GenLayer's equivalence principle correctly:
+
+```python
+consensus_json = gl.eq_principle.prompt_non_comparative(
+    lambda: context,   # leader fetches evidence URLs via gl.nondet.web.render
+    task=task,         # instructs the LLM what to assess
+    criteria=criteria, # validators judge the leader's output against these rules
+)
+```
+
+Each validator independently fetches the evidence URLs and the leader produces a structured JSON verdict. Validators then check whether the leader's verdict is reasonable — not by repeating the full task, but by evaluating the output against the stated criteria. This is the correct pattern for open-ended credibility judgments.
+
+---
+
+## Local development
+
+```powershell
+npm install
+Copy-Item .env.example .env.local
+# Edit .env.local and set NEXT_PUBLIC_CONTRACT_ADDRESS
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with MetaMask installed.
+
+---
+
+## Deploy the Intelligent Contract
+
+**Option A — GenLayer Studio (recommended)**
+
+1. Open [studio.genlayer.com](https://studio.genlayer.com)
+2. Create a new contract and paste the contents of `contracts/grafiti.py`
+3. Deploy with no constructor arguments
+4. Copy the contract address into `.env.local`
+
+**Option B — deploy script**
+
+```powershell
+$env:DEPLOYER_PRIVATE_KEY = "0x..."   # StudioNet account with GEN balance
+node scripts/deploy.mjs
+```
+
+---
+
+## Deploy the frontend
+
+1. Push this repo to GitHub
+2. Import the repo in [Vercel](https://vercel.com)
+3. Add environment variable: `NEXT_PUBLIC_CONTRACT_ADDRESS=0x...`
+4. Deploy — no other configuration needed
+
+The wallet switching to StudioNet is handled automatically on the first write transaction.
+
+---
+
+## Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_CONTRACT_ADDRESS` | Yes | Deployed Grafiti contract address on StudioNet |
