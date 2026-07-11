@@ -68,9 +68,9 @@ export async function waitForTx(hash: string) {
   const client = getReadClient();
   return client.waitForTransactionReceipt({
     hash: hash as TransactionHash,
-    status: TransactionStatus.ACCEPTED,
+    status: TransactionStatus.FINALIZED,
     interval: 3000,
-    retries: 60,
+    retries: 120,
   });
 }
 
