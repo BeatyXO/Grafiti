@@ -152,6 +152,7 @@ class GrafitiProtocol(gl.Contract):
     def _reputation_view(self, owner: str) -> dict:
         rep = self._load_reputation(owner)
         return {
+            "address": owner,
             "gravity_score": self._to_int(rep.get("gravity_score", INITIAL_GRAVITY_SCORE), INITIAL_GRAVITY_SCORE),
             "credibility_level": credibility_level(self._to_int(rep.get("gravity_score", INITIAL_GRAVITY_SCORE), INITIAL_GRAVITY_SCORE)),
             "historical_accuracy": self._historical_accuracy(rep),
@@ -291,17 +292,37 @@ class GrafitiProtocol(gl.Contract):
         claim_evidence_summary = str(claim.get("evidence_summary", ""))
         evidence_text = "\n".join(evidence_lines)
 
-        def evaluate() -> str:
+        task = (
+            "You are a credibility assessor for a decentralized reputation protocol. "
+            "Evaluate whether the public evidence supports the public claim. Be strict: "
+            "exaggeration, missing context, or unverifiable statements must lower the assessment. "
+            "Return ONLY valid JSON, no markdown fences, with exactly these keys: "
+            '{"status":"Verified|Partially Verified|Unsupported|Inconclusive",'
+            '"gravity_delta":integer,"evidence_strength":"High|Medium|Low",'
+            '"source_reliability":"High|Medium|Low","confidence":integer 0-100,'
+            '"contradiction_level":"None|Low|Medium|High","reasoning":"2-3 sentences"}'
+        )
+        criteria = (
+            "The status must be exactly one of: Verified, Partially Verified, Unsupported, Inconclusive. "
+            "gravity_delta must be an integer between -" + str(MAX_LOSS_PER_REVIEW) + " and " + str(MAX_GAIN_PER_REVIEW) + ". "
+            "Verified requires strong, directly relevant supporting evidence (positive delta). "
+            "Partially Verified means the evidence supports part of the claim (small positive delta). "
+            "Unsupported means the evidence contradicts or fails to support the claim (negative delta). "
+            "Inconclusive means the evidence could not be evaluated (delta 0). "
+            "The response must be valid JSON."
+        )
+
+        def consensus_context() -> str:
             pages = []
             for url in urls[:MAX_EVIDENCE_URLS_FETCHED]:
                 try:
-                    page = gl.nondet.web.render(url, mode="text")
+                    page = gl.nondet.web.render(url, mode="html")
                     pages.append("URL: " + url + "\n" + str(page)[:4000])
                 except Exception as e:
                     pages.append("URL: " + url + "\nFETCH FAILED: " + str(e))
             web_context = "\n\n---\n\n".join(pages)
 
-            context = (
+            return (
                 "CLAIM TITLE: " + claim_title + "\n"
                 "CLAIM DESCRIPTION: " + claim_description + "\n"
                 "CATEGORY: " + claim_category + "\n"
@@ -311,34 +332,12 @@ class GrafitiProtocol(gl.Contract):
                 "FETCHED EVIDENCE CONTENT:\n" + web_context
             )
 
-            task = (
-                "You are a credibility assessor for a decentralized reputation protocol. "
-                "Evaluate whether the public evidence supports the public claim. Be strict: "
-                "exaggeration, missing context, or unverifiable statements must lower the assessment. "
-                "Return ONLY valid JSON, no markdown fences, with exactly these keys: "
-                '{"status":"Verified|Partially Verified|Unsupported|Inconclusive",'
-                '"gravity_delta":integer,"evidence_strength":"High|Medium|Low",'
-                '"source_reliability":"High|Medium|Low","confidence":integer 0-100,'
-                '"contradiction_level":"None|Low|Medium|High","reasoning":"2-3 sentences"}'
-            )
-            criteria = (
-                "The status must be exactly one of: Verified, Partially Verified, Unsupported, Inconclusive. "
-                "gravity_delta must be an integer between -" + str(MAX_LOSS_PER_REVIEW) + " and " + str(MAX_GAIN_PER_REVIEW) + ". "
-                "Verified requires strong, directly relevant supporting evidence (positive delta). "
-                "Partially Verified means the evidence supports part of the claim (small positive delta). "
-                "Unsupported means the evidence contradicts or fails to support the claim (negative delta). "
-                "Inconclusive means the evidence could not be evaluated (delta 0). "
-                "The response must be valid JSON."
-            )
-
-            result = gl.eq_principle.prompt_non_comparative(
-                lambda: context,
-                task=task,
-                criteria=criteria,
-            )
-            return str(result).replace("```json", "").replace("```", "").strip()
-
-        raw = evaluate()
+        result = gl.eq_principle.prompt_non_comparative(
+            consensus_context,
+            task=task,
+            criteria=criteria,
+        )
+        raw = str(result).replace("```json", "").replace("```", "").strip()
         data = self._load(raw) or {}
 
         status = str(data.get("status", "Inconclusive"))

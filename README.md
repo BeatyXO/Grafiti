@@ -56,7 +56,7 @@ No backend. No database. No file uploads. The Intelligent Contract is the canoni
 
 ## Contract
 
-**Address (StudioNet):** `0x438c845F4Addb0f9CCD7Ae675802528A34dAa87C`
+**Address (StudioNet):** `0xc0D7a4696a7e8d6C204C58f8A7f20aDa302903C5`
 
 File: [`contracts/grafiti.py`](contracts/grafiti.py)
 
@@ -81,7 +81,7 @@ The `request_review` method uses GenLayer's equivalence principle correctly:
 
 ```python
 consensus_json = gl.eq_principle.prompt_non_comparative(
-    lambda: context,   # leader fetches evidence URLs via gl.nondet.web.render
+    consensus_context, # leader fetches evidence URLs via gl.nondet.web.render
     task=task,         # instructs the LLM what to assess
     criteria=criteria, # validators judge the leader's output against these rules
 )
@@ -126,7 +126,7 @@ node scripts/deploy.mjs
 
 1. Push this repo to GitHub
 2. Import the repo in [Vercel](https://vercel.com)
-3. Add environment variable: `NEXT_PUBLIC_CONTRACT_ADDRESS=0x...`
+3. Add environment variable: `NEXT_PUBLIC_CONTRACT_ADDRESS=0xc0D7a4696a7e8d6C204C58f8A7f20aDa302903C5`
 4. Deploy — no other configuration needed
 
 The wallet switching to StudioNet is handled automatically on the first write transaction.
