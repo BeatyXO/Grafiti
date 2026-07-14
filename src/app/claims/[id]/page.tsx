@@ -144,7 +144,8 @@ export default function ClaimDetailPage({
       <EvidenceSection
         claim={claim}
         evidence={evidence}
-        canEdit={!claim.reviewed}
+        canEdit={!claim.reviewed && isOwner}
+        isOwner={isOwner}
         onChanged={reload}
       />
 
@@ -166,11 +167,13 @@ function EvidenceSection({
   claim,
   evidence,
   canEdit,
+  isOwner,
   onChanged,
 }: {
   claim: Claim;
   evidence: Evidence[];
   canEdit: boolean;
+  isOwner: boolean;
   onChanged: () => void;
 }) {
   const { address } = useWallet();
@@ -234,6 +237,11 @@ function EvidenceSection({
           <p className="text-sm opacity-70">
             No evidence yet. A credibility review requires at least one public
             evidence reference.
+          </p>
+        )}
+        {!claim.reviewed && !isOwner && (
+          <p className="ledger-row text-amber-700">
+            Only the claimant can add evidence or request this score-changing review.
           </p>
         )}
         {evidence.map((ev, i) => (
@@ -371,6 +379,11 @@ function ReviewSection({
           converge on the most defensible assessment. The resulting Gravity
           Score change is permanent.
         </p>
+        {!isOwner && (
+          <p className="ledger-row text-amber-300">
+            Only the claimant can request this review.
+          </p>
+        )}
         {!hasEvidence && (
           <p className="ledger-row text-amber-300">
             Add at least one evidence reference before requesting review.
@@ -379,14 +392,12 @@ function ReviewSection({
         <TxStatus state={state} />
         <Button
           onClick={onReview}
-          disabled={busy || !hasEvidence || !address}
+          disabled={busy || !hasEvidence || !address || !isOwner}
           className="w-full"
         >
           {busy
             ? "Validators deliberating…"
-            : isOwner
-              ? "Request credibility review"
-              : "Trigger review (any wallet may request)"}
+            : "Request credibility review"}
         </Button>
       </CardContent>
     </Card>

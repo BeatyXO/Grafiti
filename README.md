@@ -25,6 +25,10 @@ Live: [grafiti-orcin.vercel.app](https://grafiti-orcin.vercel.app)
 
 ---
 
+## Reputation update authorization
+
+Only the wallet that created a claim can add evidence to it or request its one-time, score-changing review. This prevents a third party from placing misleading evidence ahead of the claimant's sources or forcing a permanent Gravity Score update.
+
 ## Stack
 
 | Layer | Technology |
@@ -56,7 +60,7 @@ No backend. No database. No file uploads. The Intelligent Contract is the canoni
 
 ## Contract
 
-**Address (StudioNet):** `0xc0D7a4696a7e8d6C204C58f8A7f20aDa302903C5`
+**Address (StudioNet):** `0x19cE8965Ab1a33390446e5bF3FF883636f14D28f`
 
 File: [`contracts/grafiti.py`](contracts/grafiti.py)
 
@@ -126,7 +130,7 @@ node scripts/deploy.mjs
 
 1. Push this repo to GitHub
 2. Import the repo in [Vercel](https://vercel.com)
-3. Add environment variable: `NEXT_PUBLIC_CONTRACT_ADDRESS=0xc0D7a4696a7e8d6C204C58f8A7f20aDa302903C5`
+3. Add environment variable: `NEXT_PUBLIC_CONTRACT_ADDRESS=0x19cE8965Ab1a33390446e5bF3FF883636f14D28f`
 4. Deploy — no other configuration needed
 
 The wallet switching to StudioNet is handled automatically on the first write transaction.

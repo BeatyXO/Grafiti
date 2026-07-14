@@ -3,7 +3,7 @@ import { studionet } from "genlayer-js/chains";
 import type { GenLayerClient, GenLayerChain } from "genlayer-js/types";
 
 export const DEFAULT_CONTRACT_ADDRESS =
-  "0xc0D7a4696a7e8d6C204C58f8A7f20aDa302903C5" as const;
+  "0x19cE8965Ab1a33390446e5bF3FF883636f14D28f" as const;
 
 export const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ??
   DEFAULT_CONTRACT_ADDRESS) as `0x${string}`;

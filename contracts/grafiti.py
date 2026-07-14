@@ -176,6 +176,11 @@ class GrafitiProtocol(gl.Contract):
             if item in lower:
                 raise gl.vm.UserError("Input contains pre-decided review language: " + item)
 
+    def _require_claimant(self, claim: dict) -> None:
+        """Keep score-affecting evidence and review actions with the claimant."""
+        if self._sender() != str(claim.get("owner", "")).lower():
+            raise gl.vm.UserError("Only the claimant can manage evidence or request review")
+
     # ------------------------------------------------------------------
     # Step 1: Create public claim
     # ------------------------------------------------------------------
@@ -239,6 +244,7 @@ class GrafitiProtocol(gl.Contract):
         claim = self._load(raw_claim)
         if claim.get("reviewed", False):
             raise gl.vm.UserError("Claim already reviewed; evidence is frozen")
+        self._require_claimant(claim)
         if not (url.startswith("http://") or url.startswith("https://")):
             raise gl.vm.UserError("Evidence URL must be public (http/https)")
 
@@ -267,6 +273,7 @@ class GrafitiProtocol(gl.Contract):
         claim = self._load(raw_claim)
         if claim.get("reviewed", False):
             raise gl.vm.UserError("Claim has already been reviewed")
+        self._require_claimant(claim)
 
         entries = self._load(self.claim_evidence.get(claim_id, "")) or []
         if len(entries) == 0:
